@@ -268,12 +268,17 @@ class CheckoutPage(ttk.Frame):
             # 添加交易记录
             transaction_df = self.controller.data.get('TransactionRecord', pd.DataFrame())
             now = pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S')
-            for item in items:
-                transaction_df = transaction_df.append({
+            new_transactions = [
+                {
                     '交易时间': now,
                     '交易金额': item['总价'],
                     '交易内容': f"{item['商品名称']} x {item['数量']}"
-                }, ignore_index=True)
+                }
+                for item in items
+            ]
+
+            # 使用 pd.concat 添加新交易记录
+            transaction_df = pd.concat([transaction_df, pd.DataFrame(new_transactions)], ignore_index=True)
 
             # 更新数据字典
             self.controller.data['Inventory'] = inventory_df
