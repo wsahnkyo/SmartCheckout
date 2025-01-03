@@ -33,17 +33,49 @@ class CheckoutPage(ttk.Frame):
         vsb.pack(side='right', fill='y')
         self.tree.configure(yscrollcommand=vsb.set)
 
-        # 新增按钮
-        add_item_button = tk.Button(self, text="新增商品", command=self.open_add_item_window)
+        # 新增按钮，现在用于选择图片并识别商品
+        add_item_button = tk.Button(self, text="选择图片识别商品", command=self.select_image_and_recognize_items)
         add_item_button.pack(pady=10)
 
         # 结账按钮
         checkout_button = tk.Button(self, text="结账", command=self.checkout)
         checkout_button.pack(pady=10)
 
-    def open_add_item_window(self):
-        '''打开新增商品窗口'''
-        AddItemPage(self, self.controller)
+    def select_image_and_recognize_items(self):
+        '''选择图片并尝试从中识别商品'''
+        file_path = filedialog.askopenfilename(
+            title="选择图片",
+            filetypes=[("Image files", "*.png;*.jpg;*.jpeg;*.bmp;*.gif")]
+        )
+        if not file_path:
+            return  # 用户取消选择
+
+        try:
+            image_classification = self.controller.get_image_classification_model()
+            result = image_classification(file_path)
+            print(result)  # 打印识别结果，以便调试
+
+            # 解析识别结果（这里简化了实际解析过程）
+            item_names = []
+
+            # 匹配库存中的商品
+            inventory_df = self.controller.data.get('Inventory', pd.DataFrame())
+            for name in item_names:
+                mask = inventory_df['商品名称'].str.contains(name, case=False, na=False)
+                if mask.any():
+                    matched_item = inventory_df[mask].iloc[0]
+                    self.add_item_to_tree(
+                        matched_item['商品名称'],
+                        1,  # 默认数量为1
+                        matched_item['单价'],  # 假设库存中有单价字段
+                        matched_item['单价']  # 总价等于单价
+                    )
+
+            if not any(mask):
+                messagebox.showwarning("警告", "没有找到匹配的商品")
+
+        except Exception as e:
+            messagebox.showerror("错误", f"图片识别失败: {e}")
 
     def add_item_to_tree(self, name, quantity, price, total):
         '''向Treeview中添加商品信息'''
